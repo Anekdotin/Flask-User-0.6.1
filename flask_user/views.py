@@ -11,65 +11,14 @@ try: # Handle Python 2.x and Python 3.x
     from urllib.parse import quote      # Python 3.x
 except ImportError:
     from urllib import quote            # Python 2.x
-from .decorators import confirm_email_required, login_required
+from .decorators import login_required
 from . import emails
 from . import signals
 from .translations import gettext as _
 
-def confirm_email(token):
-    """ Verify email confirmation token and activate the user account."""
-    # Verify token
-    user_manager = current_app.user_manager
-    db_adapter = user_manager.db_adapter
-    is_valid, has_expired, object_id = user_manager.verify_token(
-            token,
-            user_manager.confirm_email_expiration)
-
-    if has_expired:
-        flash(_('Your confirmation token has expired.'), 'error')
-        return redirect(url_for('user.login'))
-
-    if not is_valid:
-        flash(_('Invalid confirmation token.'), 'error')
-        return redirect(url_for('user.login'))
-
-    # Confirm email by setting User.active=True and User.confirmed_at=utcnow()
-    if db_adapter.UserEmailClass:
-        user_email = user_manager.get_user_email_by_id(object_id)
-        if user_email:
-            user_email.confirmed_at = datetime.utcnow()
-            user = user_email.user
-        else:
-            user = None
-    else:
-        user_email = None
-        user = user_manager.get_user_by_id(object_id)
-        if user:
-            user.confirmed_at = datetime.utcnow()
-
-    if user:
-        user.set_active(True)
-        db_adapter.commit()
-    else:                                               # pragma: no cover
-        flash(_('Invalid confirmation token.'), 'error')
-        return redirect(url_for('user.login'))
-
-    # Send email_confirmed signal
-    signals.user_confirmed_email.send(current_app._get_current_object(), user=user)
-
-    # Prepare one-time system message
-    flash(_('Your email has been confirmed.'), 'success')
-
-    # Auto-login after confirm or redirect to login page
-    next = request.args.get('next', _endpoint_url(user_manager.after_confirm_endpoint))
-    if user_manager.auto_login_after_confirm:
-        return _do_login_user(user, next)                       # auto-login
-    else:
-        return redirect(url_for('user.login')+'?next='+next)    # redirect to login page
 
 
 @login_required
-@confirm_email_required
 def change_password():
     """ Prompt for old password and new password and change the user's password."""
     user_manager =  current_app.user_manager
@@ -104,7 +53,7 @@ def change_password():
     return render_template(user_manager.change_password_template, form=form)
 
 @login_required
-@confirm_email_required
+
 def change_username():
     """ Prompt for new username and old password and change the user's username."""
     user_manager =  current_app.user_manager
@@ -140,7 +89,7 @@ def change_username():
     return render_template(user_manager.change_username_template, form=form)
 
 @login_required
-@confirm_email_required
+
 def email_action(id, action):
     """ Perform action 'action' on UserEmail object 'id'
     """
@@ -173,8 +122,6 @@ def email_action(id, action):
         # Commit
         db_adapter.commit()
 
-    elif action=='confirm':
-        _send_confirm_email(user_email.user, user_email)
 
     else:
         return unauthorized()
@@ -291,7 +238,7 @@ def logout():
 
 
 @login_required
-@confirm_email_required
+
 def manage_emails():
     user_manager =  current_app.user_manager
     db_adapter = user_manager.db_adapter
@@ -407,28 +354,9 @@ def register():
                 user.user_auth = user_auth
 
         db_adapter.commit()
-
-        # Send 'registered' email and delete new User object if send fails
-        if user_manager.send_registered_email:
-            try:
-                # Send 'registered' email
-                _send_registered_email(user, user_email)
-            except Exception as e:
-                # delete new User object if send  fails
-                db_adapter.delete_object(user)
-                db_adapter.commit()
-                raise e
-
-        # Send user_registered signal
-        signals.user_registered.send(current_app._get_current_object(), user=user)
-
-        # Redirect if USER_ENABLE_CONFIRM_EMAIL is set
-        if user_manager.enable_confirm_email:
-            next = request.args.get('next', _endpoint_url(user_manager.after_register_endpoint))
-            return redirect(next)
-
-        # Auto-login after register or redirect to login page
         next = request.args.get('next', _endpoint_url(user_manager.after_confirm_endpoint))
+
+
         if user_manager.auto_login_after_register:
             return _do_login_user(user, reg_next)                     # auto-login
         else:
@@ -439,30 +367,6 @@ def register():
             form=register_form,
             login_form=login_form,
             register_form=register_form)
-
-
-def resend_confirm_email():
-    """Prompt for email and re-send email conformation email."""
-    user_manager =  current_app.user_manager
-    db_adapter = user_manager.db_adapter
-
-    # Initialize form
-    form = user_manager.resend_confirm_email_form(request.form)
-
-    # Process valid POST
-    if request.method=='POST' and form.validate():
-        email = form.email.data
-
-        # Find user by email
-        user, user_email = user_manager.find_user_by_email(email)
-        if user:
-            _send_confirm_email(user, user_email)
-
-        # Redirect to the login page
-        return redirect(_endpoint_url(user_manager.after_resend_confirm_email_endpoint))
-
-    # Process GET or invalid POST
-    return render_template(user_manager.resend_confirm_email_template, form=form)
 
 
 def reset_password(token):
@@ -527,15 +431,6 @@ def reset_password(token):
     return render_template(user_manager.reset_password_template, form=form)
 
 
-def unconfirmed():
-    """ Prepare a Flash message and redirect to USER_UNCONFIRMED_URL"""
-    # Prepare Flash message
-    url = request.script_root + request.path
-    flash(_("You must confirm your email to access '%(url)s'.", url=url), 'error')
-
-    # Redirect to USER_UNCONFIRMED_EMAIL_ENDPOINT
-    user_manager = current_app.user_manager
-    return redirect(_endpoint_url(user_manager.unconfirmed_email_endpoint))
 
 
 def unauthenticated():
@@ -564,7 +459,7 @@ def unauthorized():
 
 
 @login_required
-@confirm_email_required
+
 def user_profile():
     user_manager = current_app.user_manager
     return render_template(user_manager.user_profile_template)
@@ -633,14 +528,6 @@ def _do_login_user(user, next, remember_me=False):
         flash(_('Your account has not been enabled.'), 'error')
         return redirect(url_for('user.home'))
 
-    # Check if user has a confirmed email address
-    user_manager = current_app.user_manager
-    if user_manager.enable_email and user_manager.enable_confirm_email \
-            and not current_app.user_manager.enable_login_without_confirm_email \
-            and not user.has_confirmed_email():
-        url = url_for('user.resend_confirm_email')
-        flash(_('Your email address has not yet been confirmed. Check your email Inbox and Spam folders for the confirmation email or <a href="%(url)s">Re-send confirmation email</a>.', url=url), 'error')
-        return redirect(url_for('user.home'))
 
     # Use Flask-Login to sign in user
     #print('login_user: remember_me=', remember_me)

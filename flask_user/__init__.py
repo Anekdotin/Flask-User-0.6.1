@@ -49,16 +49,16 @@ class UserManager(object):
                 # View functions
                 change_password_view_function=views.change_password,
                 change_username_view_function=views.change_username,
-                confirm_email_view_function=views.confirm_email,
+
                 email_action_view_function=views.email_action,
                 forgot_password_view_function=views.forgot_password,
                 login_view_function=views.login,
                 logout_view_function=views.logout,
                 manage_emails_view_function=views.manage_emails,
                 register_view_function=views.register,
-                resend_confirm_email_view_function = views.resend_confirm_email,
+
                 reset_password_view_function = views.reset_password,
-                unconfirmed_email_view_function = views.unconfirmed,
+
                 unauthenticated_view_function = views.unauthenticated,
                 unauthorized_view_function = views.unauthorized,
                 user_profile_view_function = views.user_profile,
@@ -86,16 +86,16 @@ class UserManager(object):
         # View functions
         self.change_password_view_function = change_password_view_function
         self.change_username_view_function = change_username_view_function
-        self.confirm_email_view_function = confirm_email_view_function
+
         self.email_action_view_function = email_action_view_function
         self.forgot_password_view_function = forgot_password_view_function
         self.login_view_function = login_view_function
         self.logout_view_function = logout_view_function
         self.manage_emails_view_function = manage_emails_view_function
         self.register_view_function = register_view_function
-        self.resend_confirm_email_view_function = resend_confirm_email_view_function
+
         self.reset_password_view_function = reset_password_view_function
-        self.unconfirmed_email_view_function = unconfirmed_email_view_function
+
         self.unauthenticated_view_function = unauthenticated_view_function
         self.unauthorized_view_function = unauthorized_view_function
         self.user_profile_view_function = user_profile_view_function
@@ -190,9 +190,7 @@ class UserManager(object):
         app.add_url_rule('/home',  'user.home',  self.login_view_function,  methods=['GET', 'POST'])
         app.add_url_rule(self.login_url,  'user.login',  self.login_view_function,  methods=['GET', 'POST'])
         app.add_url_rule(self.logout_url, 'user.logout', self.logout_view_function, methods=['GET', 'POST'])
-        if self.enable_confirm_email:
-            app.add_url_rule(self.confirm_email_url, 'user.confirm_email', self.confirm_email_view_function)
-            app.add_url_rule(self.resend_confirm_email_url, 'user.resend_confirm_email', self.resend_confirm_email_view_function, methods=['GET', 'POST'])
+
         if self.enable_change_password:
             app.add_url_rule(self.change_password_url, 'user.change_password', self.change_password_view_function, methods=['GET', 'POST'])
         if self.enable_change_username:

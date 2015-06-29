@@ -6,18 +6,19 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_user import login_required, UserManager, UserMixin, SQLAlchemyAdapter
 
 
+
 # Use a Class-based config to avoid needing a 2nd file
 # os.getenv() enables configuration through OS environment variables
 class ConfigClass(object):
     # Flask settings
-    SECRET_KEY =              os.getenv('SECRET_KEY',       'iliveidieiliveagain')
+    SECRET_KEY =              os.getenv('SECRET_KEY',       'THIS IS AN INSECURE SECRET')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL',     'sqlite:///basic_app.sqlite')
     CSRF_ENABLED = True
 
     # Flask-Mail settings
     MAIL_USERNAME =           os.getenv('MAIL_USERNAME',        'eddwinn@gmail.com')
-    MAIL_PASSWORD =           os.getenv('MAIL_PASSWORD',        'password')
-    MAIL_DEFAULT_SENDER =     os.getenv('MAIL_DEFAULT_SENDER',  '"MyApp" <noreply@example.com>')
+    MAIL_PASSWORD =           os.getenv('MAIL_PASSWORD',        'Julie774')
+
     MAIL_SERVER =             os.getenv('MAIL_SERVER',          'smtp.gmail.com')
     MAIL_PORT =           int(os.getenv('MAIL_PORT',            '465'))
     MAIL_USE_SSL =        int(os.getenv('MAIL_USE_SSL',         True))
@@ -83,7 +84,7 @@ def create_app():
             {% extends "base.html" %}
             {% block content %}
                 <h2>Members page</h2>
-                <p>This page can only be accessed by authenticated users.</p><br/>
+                <p>This page can only be accessed by authenticated user.</p><br/>
                 <p><a href={{ url_for('home_page') }}>Home page</a> (anyone)</p>
                 <p><a href={{ url_for('members_page') }}>Members page</a> (login required)</p>
             {% endblock %}
